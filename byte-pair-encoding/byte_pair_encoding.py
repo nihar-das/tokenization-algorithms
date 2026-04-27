@@ -99,7 +99,14 @@ class BytePairEncoding:
             for word in self.word_chars.keys():
                 joined_pair = "".join(pair)
                 if joined_pair in word:
+                    # merge in word_char list
                     self.word_chars[word] = self.merge_pair(
                         joined_pair, self.word_chars[word]
                     )
+                    # merge in vocab
+                    self.vocabs = list(
+                        filter(lambda x: x not in joined_pair, self.vocabs)
+                    )
+                    self.vocabs.append(joined_pair)
+                    # TODO:Update the heap without rebuilding it
             i -= 1
