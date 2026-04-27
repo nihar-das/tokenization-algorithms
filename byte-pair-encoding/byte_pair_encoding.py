@@ -76,3 +76,30 @@ class BytePairEncoding:
             heap = MaxHeap(nodes)
             heap.build_heap()
             self.score_heap = heap
+
+    def merge_pair(self, pair, word_list):
+        new_word_list = []
+        i = 0
+        while i < len(word_list):
+            if word_list[i] == pair[0] and word_list[i + 1] == pair[1]:
+                new_word_list.append(pair)
+                i += 2
+            else:
+                new_word_list.append(word_list[i])
+                i += 1
+        return new_word_list
+
+    def vocab_update(self, merges=5):
+        i = merges
+        while i:
+            node = self.score_heap.extract()
+            pair = node.pair
+
+            # merge the pair in every word if exists
+            for word in self.word_chars.keys():
+                joined_pair = "".join(pair)
+                if joined_pair in word:
+                    self.word_chars[word] = self.merge_pair(
+                        joined_pair, self.word_chars[word]
+                    )
+            i -= 1
