@@ -1,4 +1,4 @@
-# Tokenization Techniques Explorer
+# Tokenization Techniques
 
 - This repository is dedicated to exploring different tokenization techniques.
 
