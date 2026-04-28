@@ -82,7 +82,11 @@ class BytePairEncoding:
         new_word_list = []
         i = 0
         while i < len(word_list):
-            if word_list[i] == pair[0] and word_list[i + 1] == pair[1]:
+            if (
+                i < (len(word_list) - 1)
+                and word_list[i] == pair[0]
+                and word_list[i + 1] == pair[1]
+            ):
                 new_word_list.append(joined_pair)
                 i += 2
             else:
@@ -112,6 +116,8 @@ class BytePairEncoding:
         stale_pairs = heap_pairs - score_pairs
         existing_pair = score_pairs & heap_pairs
 
+        # FIXME: Setting score to 0 causes memory leak as inactive nodes pile up.
+        # Fix: Recreate the max_heap array entirely with active pairs instead of set ops.
         for pair in stale_pairs:
             pair_idx = pair_index_map[pair]
             self.score_heap.max_heap[pair_idx].score = 0
@@ -134,11 +140,10 @@ class BytePairEncoding:
 
             # merge the pair in every word if exists
             for word in self.word_chars.keys():
-                if joined_pair in word:
-                    # merge in word_char list
-                    self.word_chars[word] = self.merge_pair(
-                        pair, joined_pair, self.word_chars[word]
-                    )
+                # merge in word_char list
+                self.word_chars[word] = self.merge_pair(
+                    pair, joined_pair, self.word_chars[word]
+                )
             # merge in vocab
             self.vocabs.append(joined_pair)
             i -= 1
