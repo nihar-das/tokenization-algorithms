@@ -48,20 +48,20 @@ class BytePairEncoding:
 
     def compute_char_pair(self):
         char_pairs = []
-        if self.char_pairs is None:
-            for word in self.word_freq.keys():
-                for i in range(0, len(word) - 1):
-                    pair = (word[i], word[i + 1])
-                    if pair not in char_pairs:
-                        char_pairs.append(pair)
-            self.char_pairs = char_pairs
+        for word in self.word_chars.keys():
+            chars = self.word_chars[word]
+            for i in range(0, len(chars) - 1):
+                pair = (chars[i], chars[i + 1])
+                if pair not in char_pairs:
+                    char_pairs.append(pair)
+        self.char_pairs = char_pairs
 
     def score_all_pair(self):
         all_pair_scores = {}
         for target_pair in self.char_pairs:
             all_pair_scores[target_pair] = 0
-            for word in self.word_freq.keys():
-                word_pairs = list(zip(word, word[1:]))
+            for word in self.word_chars.keys():
+                word_pairs = list(zip(self.word_chars[word], self.word_chars[word][1:]))
                 pair_counter = Counter(word_pairs)
                 all_pair_scores[target_pair] += (
                     pair_counter[target_pair] * self.word_freq[word]
@@ -69,7 +69,7 @@ class BytePairEncoding:
         self.all_pair_scores = all_pair_scores
 
     def build_score_heap(self):
-        if self.all_pair_scores and (self.score_heap is None):
+        if self.all_pair_scores:
             nodes = [
                 MaxHeapNode(self.all_pair_scores[pair], pair)
                 for pair in self.all_pair_scores.keys()
@@ -78,39 +78,74 @@ class BytePairEncoding:
             heap.build_heap()
             self.score_heap = heap
 
-    def merge_pair(self, pair, word_list):
+    def merge_pair(self, pair, joined_pair, word_list):
         new_word_list = []
         i = 0
         while i < len(word_list):
             if word_list[i] == pair[0] and word_list[i + 1] == pair[1]:
-                new_word_list.append(pair)
+                new_word_list.append(joined_pair)
                 i += 2
             else:
                 new_word_list.append(word_list[i])
                 i += 1
         return new_word_list
 
+    """
+    compute new pairs -> score new pairs
+    compute new, existing and stale node by comparing
+        - pair<->score map
+        - pair<->index map (heap)
+    new: score_pairs - heap_pairs
+    stale: heap_pairs - score_pairs
+    existing: score_pairs n heap_pairs
+    """
+
+    def update_heap(self):
+        self.compute_char_pair()
+        self.score_all_pair()
+        pair_index_map = self.score_heap.pair2index()
+
+        heap_pairs = set(pair_index_map.keys())
+        score_pairs = set(self.all_pair_scores.keys())
+
+        new_pairs = score_pairs - heap_pairs
+        stale_pairs = heap_pairs - score_pairs
+        existing_pair = score_pairs & heap_pairs
+
+        for pair in stale_pairs:
+            pair_idx = pair_index_map[pair]
+            self.score_heap.max_heap[pair_idx].score = 0
+
+        for pair in existing_pair:
+            pair_idx = pair_index_map[pair]
+            self.score_heap.max_heap[pair_idx].score = self.all_pair_scores[pair]
+
+        for pair in new_pairs:
+            self.score_heap.insert(MaxHeapNode(self.all_pair_scores[pair], pair))
+
+        self.score_heap.build_heap()
+
     def vocab_update(self, merges=5):
-        merge_history = []
         i = merges
         while i:
             node = self.score_heap.extract()
             pair = node.pair
             joined_pair = "".join(pair)
-            merge_history.append({pair: joined_pair})
 
             # merge the pair in every word if exists
             for word in self.word_chars.keys():
                 if joined_pair in word:
                     # merge in word_char list
                     self.word_chars[word] = self.merge_pair(
-                        joined_pair, self.word_chars[word]
+                        pair, joined_pair, self.word_chars[word]
                     )
-                    # merge in vocab
-                    self.vocabs = list(
-                        filter(lambda x: x not in joined_pair, self.vocabs)
-                    )
-                    self.vocabs.append(joined_pair)
-            # TODO: update the heap to remove element of combined pair from head and update it
+            # merge in vocab
+            self.vocabs.append(joined_pair)
             i -= 1
-            self.merge_history = merge_history
+            # store every merge operation
+            if self.merge_history is None:
+                self.merge_history = [{pair: joined_pair}]
+            else:
+                self.merge_history.append({pair: joined_pair})
+
+            self.update_heap()
