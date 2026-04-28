@@ -168,8 +168,30 @@ class BytePairEncoding:
             i -= 1
             # store every merge operation
             if self.merge_history is None:
-                self.merge_history = [{pair: (self.run, joined_pair)}]
+                self.merge_history = [(pair, self.run, joined_pair)]
             else:
-                self.merge_history.append({pair: (self.run, joined_pair)})
+                self.merge_history.append((pair, self.run, joined_pair))
 
             self.update_heap()
+
+    def inference(self, text):
+        pre_tokenized_text = pre_tokenize(text)
+        word_token_map = {}
+        for word in pre_tokenized_text:
+            word_token_map[word] = [char for char in word] + ["_"]
+
+        """
+            check each element of pair is present in current vocab -> merge them remove original individuals
+            for pair, _, joined_pair in self.merge_history:
+                check the pair in each word and join it
+            
+            final result is each word tokenize version
+        """
+        for pair, _, joined_pair in self.merge_history:
+            for word in word_token_map.keys():
+                word_token_map[word] = self.merge_pair(
+                    pair,
+                    joined_pair,
+                    self.merge_pair(pair, joined_pair, word_token_map[word]),
+                )
+        return word_token_map
