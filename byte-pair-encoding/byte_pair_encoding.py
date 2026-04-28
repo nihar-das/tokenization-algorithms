@@ -1,10 +1,27 @@
 from collections import Counter
 from max_heap import MaxHeapNode, MaxHeap
+from itertools import groupby
+
+
+def get_type(c):
+    if c.isalpha():
+        return "alpha"
+    if c.isdigit():
+        return "digit"
+    return "special"
+
+
+def pre_tokenize(text):
+    out = []
+    for s in text.split(" "):
+        parts = ["".join(group) for _, group in groupby(s, key=get_type)]
+        out = [*out, *parts]
+    return out
 
 
 class BytePairEncoding:
     def __init__(self, text):
-        self.text = text
+        self.text = pre_tokenize(text)
         self.word_freq = None
         self.word_chars = None
         self.vocabs = None
@@ -12,6 +29,7 @@ class BytePairEncoding:
         self.all_pair_scores = None
         self.score_heap = None
         self.merge_history = None
+        self.run = 0
 
         self.text2WordFreq()
         self.word2chars()
@@ -23,7 +41,7 @@ class BytePairEncoding:
     def text2WordFreq(self):
         if self.word_freq is None:
             word_freq = {}
-            for word in self.text.split(" "):
+            for word in self.text:
                 act_word = f"{word}_"
                 if act_word not in word_freq:
                     word_freq[act_word] = 1
@@ -134,6 +152,7 @@ class BytePairEncoding:
     def vocab_update(self, merges=5):
         i = merges
         while i:
+            self.run += 1  # keep track of total merge operations runs
             node = self.score_heap.extract()
             pair = node.pair
             joined_pair = "".join(pair)
@@ -149,8 +168,8 @@ class BytePairEncoding:
             i -= 1
             # store every merge operation
             if self.merge_history is None:
-                self.merge_history = [{pair: joined_pair}]
+                self.merge_history = [{pair: (self.run, joined_pair)}]
             else:
-                self.merge_history.append({pair: joined_pair})
+                self.merge_history.append({pair: (self.run, joined_pair)})
 
             self.update_heap()
