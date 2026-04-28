@@ -13,3 +13,4 @@
 - **References:**
   - [Understanding Byte Pair Encoding (Medium article)](https://medium.com/@hsinhungw/understanding-byte-pair-encoding-fd196ebfe93f)
   - [Neural Machine Translation of Rare Words with Subword Units (Original BPE for NLP Paper)](https://arxiv.org/abs/1508.07909)
+  - [Let's build the GPT Tokenizer (Andrej Karpathy)](https://www.youtube.com/watch?v=zduSFxRajkE)
