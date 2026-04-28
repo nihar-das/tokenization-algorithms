@@ -11,6 +11,7 @@ class BytePairEncoding:
         self.char_pairs = None
         self.all_pair_scores = None
         self.score_heap = None
+        self.merge_history = None
 
         self.text2WordFreq()
         self.word2chars()
@@ -90,14 +91,16 @@ class BytePairEncoding:
         return new_word_list
 
     def vocab_update(self, merges=5):
+        merge_history = []
         i = merges
         while i:
             node = self.score_heap.extract()
             pair = node.pair
+            joined_pair = "".join(pair)
+            merge_history.append({pair: joined_pair})
 
             # merge the pair in every word if exists
             for word in self.word_chars.keys():
-                joined_pair = "".join(pair)
                 if joined_pair in word:
                     # merge in word_char list
                     self.word_chars[word] = self.merge_pair(
@@ -108,5 +111,6 @@ class BytePairEncoding:
                         filter(lambda x: x not in joined_pair, self.vocabs)
                     )
                     self.vocabs.append(joined_pair)
-                    # TODO:Update the heap without rebuilding it
+            # TODO: update the heap to remove element of combined pair from head and update it
             i -= 1
+            self.merge_history = merge_history
