@@ -2,3 +2,5 @@
 __pycache__/
 *.py[cod]
 byte-pair-encoding/todo.md
+byte-pair-encoding/debug.py
+/.vscode/
